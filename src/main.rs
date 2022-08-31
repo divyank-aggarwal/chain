@@ -1,3 +1,4 @@
+mod redis_utils;
 mod types;
 mod utils;
 
@@ -8,17 +9,17 @@ use rand::{
     Rng,
 };
 use rand_core::OsRng;
-use redis::Commands;
-use std::convert::TryInto;
+use redis_utils::{connection, redis_tx};
+use types::block::Block;
 use types::transaction::Transaction;
+use utils::byte::demo;
 use utils::merkel;
-
-use crate::types::block::Block;
-use crate::utils::byte::demo;
 
 fn main() {
     // transaction test
     let mut txs: Vec<Transaction> = vec![];
+    let mut con = connection::connect();
+    connection::test_redis(&mut con);
     for ctr in 0..7 {
         let tx_id = rand::thread_rng()
             .sample_iter(Standard)
@@ -33,7 +34,6 @@ fn main() {
             .collect();
         let message_bytes = message_str.as_bytes();
         let signature: Signature = priv_key.sign(message_bytes);
-        println!("{:?}", signature);
         let signature: [u8; 64] = demo(signature.to_vec());
         let tx_id = demo(tx_id);
         let pub_key = demo(pub_key.to_vec());
@@ -45,6 +45,11 @@ fn main() {
             signature,
         });
         println!("tx {}: Validity: {}", ctr, txs[ctr].is_transaction_valid());
+
+        //redis test
+        redis_tx::insert_transaction(&txs[ctr], &mut con);
+        let get_back = redis_tx::get_transaction(&tx_id, &mut con);
+        println!("{:?}", get_back);
     }
     let root = merkel::get_merkel_root(&txs);
     println!("{:?}", root);
@@ -82,12 +87,4 @@ fn main() {
     println!("{}", signature.to_string().len());
     let verify_key = VerifyingKey::from(&signing_key);
     assert!(verify_key.verify(message, &signature).is_ok());
-    println!("{:?}", test_redis());
-}
-
-fn test_redis() -> redis::RedisResult<isize> {
-    let client = redis::Client::open("redis://127.0.0.1:6379")?;
-    let mut con = client.get_connection()?;
-    let _: () = con.set("my_key", 42)?;
-    con.get("my_key")
 }

@@ -1,7 +1,6 @@
-use std::io::Read;
-
 use super::transaction::Transaction;
 use crate::utils::{byte::demo, merkel::get_merkel_root};
+use rand::{distributions::Standard, Rng};
 use sha2::{Digest, Sha256};
 
 pub struct Block {
@@ -36,14 +35,25 @@ impl Block {
 
         //TODO: Check valid nonce
 
-        //TODO: Check valid header
-        // header = hash (root, pub_key, prev_block_header, nonce, difficulty, timestamp)
+        // Check valid header
+        // header = hash (root, pub_key, prev_block_header, nonce, difficulty, timestamp
 
-        let mut hasher = Sha256::new();
+        //TODO: actual logic for previous block header
+        let prev_block_header = rand::thread_rng()
+            .sample_iter(Standard)
+            .take(32)
+            .collect::<Vec<u8>>();
+        let prev_block_header: [u8; 32] = demo(prev_block_header);
+        let header_to_check = self.get_header_hash(&prev_block_header);
+
+        /* Commented because actual logic for prev header is not there */
+        // if prev_block_header != header_to_check {
+        //     return false;
+        // }
 
         true
     }
-    fn get_hash(&self, prev_block_header: &[u8; 32]) -> [u8; 32] {
+    fn get_header_hash(&self, prev_block_header: &[u8; 32]) -> [u8; 32] {
         let mut bytes_array: Vec<u8> = vec![];
         bytes_array.extend(self.root.iter());
         bytes_array.extend(self.miner_pubkey.iter());
@@ -51,7 +61,6 @@ impl Block {
         bytes_array.extend(self.nonce.to_be_bytes().iter());
         bytes_array.extend(self.difficulty.to_be_bytes().iter());
         bytes_array.extend(self.timestamp.to_be_bytes().iter());
-        let bytes_array = demo(bytes_array);
         let mut hasher = Sha256::new();
         hasher.update(&bytes_array);
         let hash = hasher
@@ -59,5 +68,6 @@ impl Block {
             .as_slice()
             .try_into()
             .expect("Wrong Length");
+        hash
     }
 }

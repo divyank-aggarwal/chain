@@ -1,7 +1,11 @@
+mod db;
+mod errors;
 mod redis_utils;
 mod types;
 mod utils;
 
+use db::connection::{create_connection_string, DbState};
+use db::utils::get_user_nonce;
 use k256::ecdsa::{signature::Signer, Signature, SigningKey};
 use k256::ecdsa::{signature::Verifier, VerifyingKey};
 use rand::{
@@ -10,12 +14,52 @@ use rand::{
 };
 use rand_core::OsRng;
 use redis_utils::{connection, redis_tx};
+use sqlx::postgres::PgPoolOptions;
 use types::block::Block;
 use types::transaction::Transaction;
 use utils::byte::demo;
 use utils::merkel;
 
-fn main() {
+#[actix_web::main]
+async fn main() {
+    many_tests();
+    let conn_url = create_connection_string();
+    let db_pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&conn_url)
+        .await
+        .expect("Please pass");
+    let db_pool = DbState { db_pool };
+    let test_key: [u8; 1] = [39];
+    println!("{}", hex::encode(test_key));
+    let get_nonce = get_user_nonce(&test_key, &db_pool.db_pool).await;
+    match get_nonce {
+        Ok(x) => println!("{}", x),
+        Err(y) => {
+            println!("{:?}", y);
+        }
+    }
+    match db::utils::insert_user_nonce(&test_key, 5, &db_pool.db_pool).await {
+        Ok(_) => {}
+        Err(y) => {
+            println!("{:?}", y);
+        }
+    }
+
+    let test_key2: [u8; 3] = [41, 56, 21];
+    match db::utils::insert_user_nonce(&test_key2, 2, &db_pool.db_pool).await {
+        Ok(_) => {}
+        Err(y) => {
+            println!("{:?}", y);
+        }
+    }
+    sqlx::migrate!("./src/db/migrations")
+        .run(&db_pool.db_pool)
+        .await
+        .expect("Migrations did not run!")
+}
+
+fn many_tests() {
     // transaction test
     let mut txs: Vec<Transaction> = vec![];
     let mut con = connection::connect();
@@ -87,4 +131,10 @@ fn main() {
     println!("{}", signature.to_string().len());
     let verify_key = VerifyingKey::from(&signing_key);
     assert!(verify_key.verify(message, &signature).is_ok());
+    let random_key = rand::thread_rng()
+        .sample_iter(Standard)
+        .take(32)
+        .collect::<Vec<u8>>();
+    let random_key: [u8; 32] = demo(random_key);
+    redis_tx::get_transaction(&random_key, &mut con);
 }

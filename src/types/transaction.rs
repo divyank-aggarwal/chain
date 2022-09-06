@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use sha2::{Digest, Sha256};
 
+use crate::db::connection::DbState;
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Transaction {
     pub tx_id: [u8; 32],

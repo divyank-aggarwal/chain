@@ -8,7 +8,7 @@ pub fn connect() -> redis::Connection {
     let redis_port = env::var("REDIS_PORT")
         .expect("Missing redis port")
         .parse::<u32>()
-        .expect("Failed to convert redist host to integer");
+        .expect("Failed to convert redis host to integer");
     let redis_password = env::var("REDIS_PASS").expect("Missing redis password");
     let conn_url = format!("redis://:{}@{}:{}", redis_password, redis_host, redis_port);
     redis::Client::open(conn_url)

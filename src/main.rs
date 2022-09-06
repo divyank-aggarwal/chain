@@ -20,6 +20,8 @@ use types::transaction::Transaction;
 use utils::byte::demo;
 use utils::merkel;
 
+use crate::db::utils::insert_transaction_into_db;
+
 #[actix_web::main]
 async fn main() {
     many_tests();
@@ -56,7 +58,41 @@ async fn main() {
     sqlx::migrate!("./src/db/migrations")
         .run(&db_pool.db_pool)
         .await
-        .expect("Migrations did not run!")
+        .expect("Migrations did not run!");
+
+    // test for transaction db functions
+    let tx_id = rand::thread_rng()
+        .sample_iter(Standard)
+        .take(32)
+        .collect::<Vec<u8>>();
+    let priv_key = SigningKey::random(&mut OsRng);
+    let pub_key = priv_key.verifying_key().to_bytes();
+    let message_str: String = rand::thread_rng()
+        .sample_iter(Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect();
+    let message_bytes = message_str.as_bytes();
+    let signature: Signature = priv_key.sign(message_bytes);
+    let signature: [u8; 64] = demo(signature.to_vec());
+    let tx_id = demo(tx_id);
+    let pub_key = demo(pub_key.to_vec());
+    let tx = Transaction {
+        tx_id,
+        pub_key,
+        nonce: rand::thread_rng().gen_range(0..32000),
+        message: message_str,
+        signature,
+    };
+    db::utils::insert_user_nonce(&pub_key, 1, &db_pool.db_pool).await;
+    match insert_transaction_into_db(&tx, &db_pool.db_pool).await {
+        Ok(_) => {
+            println!("I am worthy!");
+        }
+        Err(y) => {
+            println!("{:?}", y);
+        }
+    }
 }
 
 fn many_tests() {

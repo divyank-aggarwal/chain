@@ -360,6 +360,7 @@ dependencies = [
  "actix-web",
  "dotenv",
  "hex",
+ "include_dir",
  "k256",
  "rand",
  "rand_core",

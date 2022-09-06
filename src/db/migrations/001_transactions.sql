@@ -1,4 +1,4 @@
-Create table if not exists trasactions (
+Create table if not exists transactions (
     tx_id bytea primary key,
     message text not null,
     pub_key bytea references users(pub_key) not null,

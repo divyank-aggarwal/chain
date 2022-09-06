@@ -2,6 +2,7 @@
 name = "chain"
 version = "0.1.0"
 edition = "2021"
+default-run = "chain"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,3 +21,4 @@ hex = "0.4"
 actix-web = "4.0"
 sqlx = {version = " 0.5", features = ["runtime-actix-native-tls","postgres","chrono"]}
 sqlx-pg-migrate = "1"
+include_dir="0.7"

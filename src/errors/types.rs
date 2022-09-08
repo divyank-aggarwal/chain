@@ -5,3 +5,9 @@ pub enum ChainErrors {
     DatabaseOther(String),
     ConversionError(String),
 }
+
+impl From<sqlx::Error> for ChainErrors {
+    fn from(y: sqlx::Error) -> Self {
+        ChainErrors::DatabaseOther(format!("{:?}", y))
+    }
+}

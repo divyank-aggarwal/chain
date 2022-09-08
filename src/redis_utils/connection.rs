@@ -21,7 +21,7 @@ pub fn test_redis(con: &mut redis::Connection) {
     let _: () = con
         .set("my_key", 42)
         .expect("Failed to set value in redis test");
-    let x: u32 = con
+    let _x: u32 = con
         .get("my_key")
         .expect("Failed to get value in redis test");
 }

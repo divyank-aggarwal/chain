@@ -24,7 +24,7 @@ use crate::db::utils::insert_transaction_into_db;
 
 #[actix_web::main]
 async fn main() {
-    many_tests();
+    many_tests().await;
     let conn_url = create_connection_string();
     let db_pool = PgPoolOptions::new()
         .max_connections(10)
@@ -95,10 +95,17 @@ async fn main() {
     }
 }
 
-fn many_tests() {
+async fn many_tests() {
     // transaction test
     let mut txs: Vec<Transaction> = vec![];
     let mut con = connection::connect();
+    let conn_url = create_connection_string();
+    let db_pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&conn_url)
+        .await
+        .expect("Please pass");
+    let db_pool = DbState { db_pool };
     connection::test_redis(&mut con);
     for ctr in 0..7 {
         let tx_id = rand::thread_rng()
@@ -136,11 +143,13 @@ fn many_tests() {
 
     //block test
 
-    let miner_pub_key = rand::thread_rng()
-        .sample_iter(Standard)
-        .take(33)
-        .collect::<Vec<u8>>();
-    let miner_pub_key = demo(miner_pub_key);
+    // let miner_pub_key = rand::thread_rng()
+    //     .sample_iter(Standard)
+    //     .take(33)
+    //     .collect::<Vec<u8>>();
+    // let miner_pub_key = demo(miner_pub_key);
+
+    let miner_pub_key = txs[0].pub_key;
     let header = rand::thread_rng()
         .sample_iter(Standard)
         .take(32)
@@ -155,6 +164,15 @@ fn many_tests() {
         timestamp: rand::thread_rng().gen_range(0..32000),
         miner_pubkey: miner_pub_key,
         header,
+    };
+
+    match db::utils::insert_block_into_db(&block, &db_pool.db_pool).await {
+        Ok(_) => {
+            println!("Block inserted successfully");
+        }
+        Err(y) => {
+            println!("{:?}", y);
+        }
     };
     println!("{}", block.is_block_valid());
 

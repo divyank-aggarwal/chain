@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::PgPool;
 use std::env;
 
 pub struct DbState {
